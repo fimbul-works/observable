@@ -1,0 +1,88 @@
+{
+  "name": "@fimbul-works/observable",
+  "description": "A lightweight, strongly-typed TypeScript library for reactive programming patterns, providing observable collections, values, and event handling.",
+  "version": "1.0.1",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "author": "FimbulWorks <contact@fimbul.works>",
+  "homepage": "https://github.com/fimbul-works/observable#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fimbul-works/observable.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fimbul-works/observable/issues"
+  },
+  "keywords": [
+    "collections",
+    "emitter",
+    "event-emitter",
+    "event-handling",
+    "events",
+    "observable",
+    "reactive",
+    "reactive-programming",
+    "pubsub",
+    "publisher-subscriber",
+    "signal",
+    "signals",
+    "state-management"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc --build --clean && tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./event-emitter": {
+      "types": "./dist/event-emitter.d.ts",
+      "import": "./dist/event-emitter.js",
+      "require": "./dist/event-emitter.js"
+    },
+    "./map": {
+      "types": "./dist/map.d.ts",
+      "import": "./dist/map.js",
+      "require": "./dist/map.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "import": "./dist/registry.js",
+      "require": "./dist/registry.js"
+    },
+    "./set": {
+      "types": "./dist/set.d.ts",
+      "import": "./dist/set.js",
+      "require": "./dist/set.js"
+    },
+    "./signal": {
+      "types": "./dist/signal.d.ts",
+      "import": "./dist/signal.js",
+      "require": "./dist/signal.js"
+    },
+    "./value": {
+      "types": "./dist/value.d.ts",
+      "import": "./dist/value.js",
+      "require": "./dist/value.js"
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3"
+  }
+}
