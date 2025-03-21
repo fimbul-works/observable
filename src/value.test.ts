@@ -243,4 +243,175 @@ describe("ObservableValue", () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
     });
   });
+
+  describe("async methods", () => {
+    let observable: ObservableValue<number>;
+
+    beforeEach(() => {
+      observable = new ObservableValue(10);
+    });
+
+    describe("setAsync", () => {
+      it("should update value and notify observers asynchronously", async () => {
+        const handler = jest.fn();
+        observable.onChange(handler);
+
+        await observable.setAsync(20);
+
+        expect(observable.get()).toBe(20);
+        expect(handler).toHaveBeenCalledWith(20);
+      });
+
+      it("should not notify when setting the same value", async () => {
+        const handler = jest.fn();
+        observable.onChange(handler);
+
+        await observable.setAsync(10);
+
+        expect(observable.get()).toBe(10);
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it("should wait for async handlers to complete", async () => {
+        const results: number[] = [];
+        const slowHandler = jest
+          .fn()
+          .mockImplementation(async (value: number) => {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+            results.push(value);
+          });
+
+        observable.onChange(slowHandler);
+        await observable.setAsync(20);
+
+        expect(results).toEqual([20]);
+      });
+
+      it("should handle errors in async handlers", async () => {
+        const errorHandler = jest.fn().mockImplementation(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          throw new Error("Async handler error");
+        });
+        const normalHandler = jest.fn();
+
+        const consoleErrorSpy = jest
+          .spyOn(console, "error")
+          .mockImplementation();
+
+        observable.onChange(errorHandler);
+        observable.onChange(normalHandler);
+
+        await observable.setAsync(20);
+
+        expect(normalHandler).toHaveBeenCalledWith(20);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
+
+        consoleErrorSpy.mockRestore();
+      });
+    });
+
+    describe("updateAsync", () => {
+      it("should update value using transform function and notify asynchronously", async () => {
+        const handler = jest.fn();
+        observable.onChange(handler);
+
+        await observable.updateAsync((val) => val * 2);
+
+        expect(observable.get()).toBe(20);
+        expect(handler).toHaveBeenCalledWith(20);
+      });
+
+      it("should not notify if transform returns same value", async () => {
+        const handler = jest.fn();
+        observable.onChange(handler);
+
+        await observable.updateAsync((val) => val);
+
+        expect(observable.get()).toBe(10);
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it("should wait for all async handlers", async () => {
+        const results: string[] = [];
+
+        const slowHandler1 = jest
+          .fn()
+          .mockImplementation(async (value: number) => {
+            await new Promise((resolve) => setTimeout(resolve, 30));
+            results.push(`first: ${value}`);
+          });
+
+        const slowHandler2 = jest
+          .fn()
+          .mockImplementation(async (value: number) => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            results.push(`second: ${value}`);
+          });
+
+        observable.onChange(slowHandler1);
+        observable.onChange(slowHandler2);
+
+        await observable.updateAsync((val) => val + 5);
+
+        expect(results.length).toBe(2);
+        expect(results).toContain("first: 15");
+        expect(results).toContain("second: 15");
+      });
+
+      it("should handle errors in transform function", async () => {
+        const handler = jest.fn();
+        observable.onChange(handler);
+
+        await expect(
+          observable.updateAsync(() => {
+            throw new Error("Transform error");
+          }),
+        ).rejects.toThrow("Transform error");
+
+        // Value should remain unchanged
+        expect(observable.get()).toBe(10);
+        expect(handler).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("async integration with derived observables", () => {
+      it("should propagate async updates to derived observables", async () => {
+        const doubled = observable.map((x) => x * 2);
+        const doubledHandler = jest.fn();
+
+        doubled.onChange(doubledHandler);
+
+        await observable.setAsync(15);
+
+        expect(doubled.get()).toBe(30);
+        expect(doubledHandler).toHaveBeenCalledWith(30);
+      });
+
+      it("should handle complex dependency chains asynchronously", async () => {
+        const doubled = observable.map((x) => x * 2);
+        const plusOne = doubled.map((x) => x + 1);
+        const asString = plusOne.map((x) => `Value: ${x}`);
+
+        const results: string[] = [];
+        const stringHandler = jest
+          .fn()
+          .mockImplementation(async (value: string) => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            results.push(value);
+          });
+
+        asString.onChange(stringHandler);
+
+        await observable.setAsync(5);
+
+        // We need to wait for the async handler to complete
+        await new Promise((resolve) => setTimeout(resolve, 20));
+
+        expect(doubled.get()).toBe(10);
+        expect(plusOne.get()).toBe(11);
+        expect(asString.get()).toBe("Value: 11");
+        expect(results).toEqual(["Value: 11"]);
+      });
+    });
+  });
 });

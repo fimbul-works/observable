@@ -65,6 +65,26 @@ export class ObservableSet<T>
   }
 
   /**
+   * Adds a value to the set and waits for all change handlers to complete.
+   * @param value - The value to add
+   * @returns {Promise<this>} Promise resolving to the set instance for method chaining
+   */
+  async addAsync(value: T): Promise<this> {
+    const exists = this.#set.has(value);
+    this.#set.add(value);
+
+    if (!exists) {
+      await this.#signal.emitAsync({
+        type: "add",
+        key: value,
+        value: true,
+      });
+    }
+
+    return this;
+  }
+
+  /**
    * Removes a value from the set and emits a delete event if it was present.
    * @param value - The value to remove from the set
    * @returns {boolean} True if the value was removed, false if it wasn't in the set
@@ -74,6 +94,25 @@ export class ObservableSet<T>
 
     if (result) {
       this.#signal.emit({
+        type: "delete",
+        key: value,
+        oldValue: true,
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Deletes a value from the set and waits for all change handlers to complete.
+   * @param value - The value to delete
+   * @returns {Promise<boolean>} Promise resolving to true if the value was deleted, false otherwise
+   */
+  async deleteAsync(value: T): Promise<boolean> {
+    const result = this.#set.delete(value);
+
+    if (result) {
+      await this.#signal.emitAsync({
         type: "delete",
         key: value,
         oldValue: true,
@@ -101,6 +140,20 @@ export class ObservableSet<T>
 
     this.#set.clear();
     this.#signal.emit({
+      type: "clear",
+      key: null as T,
+    });
+  }
+
+  /**
+   * Clears the set and waits for all change handlers to complete.
+   * @returns {Promise<void>}
+   */
+  async clearAsync(): Promise<void> {
+    if (this.#set.size === 0) return;
+
+    this.#set.clear();
+    await this.#signal.emitAsync({
       type: "clear",
       key: null as T,
     });

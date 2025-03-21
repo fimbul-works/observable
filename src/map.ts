@@ -68,6 +68,30 @@ export class ObservableMap<K, V> implements Observable<CollectionEvent<K, V>> {
   }
 
   /**
+   * Sets a value for the specified key and waits for all change handlers to complete.
+   * @param key - The key to set
+   * @param value - The value to associate with the key
+   * @returns {Promise<this>} Promise resolving to the map instance for method chaining
+   */
+  async setAsync(key: K, value: V): Promise<this> {
+    const exists = this.#map.has(key);
+    const oldValue = this.#map.get(key);
+
+    if (oldValue !== undefined && oldValue === value) return this;
+
+    this.#map.set(key, value);
+
+    await this.#emitAsync({
+      type: exists ? "update" : "add",
+      key,
+      value,
+      oldValue,
+    });
+
+    return this;
+  }
+
+  /**
    * Retrieves the value associated with a key.
    * @param key - The key to look up
    * @returns {V | undefined} The value associated with the key, or undefined if the key doesn't exist
@@ -107,6 +131,26 @@ export class ObservableMap<K, V> implements Observable<CollectionEvent<K, V>> {
   }
 
   /**
+   * Deletes a key-value pair and waits for all change handlers to complete.
+   * @param key - The key to delete
+   * @returns {Promise<boolean>} Promise resolving to true if the key was deleted, false otherwise
+   */
+  async deleteAsync(key: K): Promise<boolean> {
+    const value = this.#map.get(key);
+    const result = this.#map.delete(key);
+
+    if (result) {
+      await this.#emitAsync({
+        type: "delete",
+        key,
+        oldValue: value,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Removes all entries from the map.
    * Emits a 'clear' event.
    */
@@ -115,6 +159,20 @@ export class ObservableMap<K, V> implements Observable<CollectionEvent<K, V>> {
 
     this.#map.clear();
     this.#signal.emit({
+      type: "clear",
+      key: null as K,
+    });
+  }
+
+  /**
+   * Clears the map and waits for all change handlers to complete.
+   * @returns {Promise<void>}
+   */
+  async clearAsync(): Promise<void> {
+    if (this.#map.size === 0) return;
+
+    this.#map.clear();
+    await this.#emitAsync({
       type: "clear",
       key: null as K,
     });
@@ -222,5 +280,14 @@ export class ObservableMap<K, V> implements Observable<CollectionEvent<K, V>> {
       String(key),
       value,
     ]);
+  }
+
+  /**
+   * Emits a change event asynchronously and waits for all handlers to complete.
+   * @param event - The collection event to emit
+   * @returns {Promise<number>} Promise resolving to the number of handlers called
+   */
+  async #emitAsync(event: CollectionEvent<K, V>): Promise<number> {
+    return this.#signal.emitAsync(event);
   }
 }

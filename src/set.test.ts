@@ -336,4 +336,227 @@ describe("ObservableSet", () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
     });
   });
+
+  describe("async methods", () => {
+    let set: ObservableSet<string>;
+
+    beforeEach(() => {
+      set = new ObservableSet<string>();
+    });
+
+    describe("addAsync", () => {
+      it("should add a new value asynchronously", async () => {
+        const result = await set.addAsync("test");
+
+        expect(set.has("test")).toBe(true);
+        expect(result).toBe(set);
+      });
+
+      it("should emit add event and wait for handlers", async () => {
+        const results: string[] = [];
+        const handler = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`${event.type}: ${event.key}`);
+        });
+
+        set.onChange(handler);
+        await set.addAsync("test");
+
+        expect(handler).toHaveBeenCalledWith({
+          type: "add",
+          key: "test",
+          value: true,
+        });
+        expect(results).toEqual(["add: test"]);
+      });
+
+      it("should not emit event when adding existing value", async () => {
+        await set.addAsync("test");
+
+        const handler = jest.fn();
+        set.onChange(handler);
+
+        await set.addAsync("test");
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it("should wait for all async handlers", async () => {
+        const results: string[] = [];
+
+        const slowHandler1 = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          results.push(`first: ${event.type}`);
+        });
+
+        const slowHandler2 = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`second: ${event.type}`);
+        });
+
+        set.onChange(slowHandler1);
+        set.onChange(slowHandler2);
+
+        await set.addAsync("test");
+
+        expect(results.length).toBe(2);
+        expect(results).toContain("first: add");
+        expect(results).toContain("second: add");
+      });
+    });
+
+    describe("deleteAsync", () => {
+      it("should remove existing values asynchronously", async () => {
+        await set.addAsync("test");
+        const result = await set.deleteAsync("test");
+
+        expect(result).toBe(true);
+        expect(set.has("test")).toBe(false);
+      });
+
+      it("should emit delete event and wait for handlers", async () => {
+        await set.addAsync("test");
+
+        const results: string[] = [];
+        const handler = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`${event.type}: ${event.key}`);
+        });
+
+        set.onChange(handler);
+        await set.deleteAsync("test");
+
+        expect(handler).toHaveBeenCalledWith({
+          type: "delete",
+          key: "test",
+          oldValue: true,
+        });
+        expect(results).toEqual(["delete: test"]);
+      });
+
+      it("should return false for non-existent values", async () => {
+        const result = await set.deleteAsync("nonexistent");
+        expect(result).toBe(false);
+      });
+
+      it("should not emit event for non-existent values", async () => {
+        const handler = jest.fn();
+        set.onChange(handler);
+
+        await set.deleteAsync("nonexistent");
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("clearAsync", () => {
+      it("should remove all values asynchronously", async () => {
+        await set.addAsync("one");
+        await set.addAsync("two");
+
+        await set.clearAsync();
+
+        expect(set.size).toBe(0);
+        expect(set.has("one")).toBe(false);
+        expect(set.has("two")).toBe(false);
+      });
+
+      it("should emit clear event and wait for handlers", async () => {
+        await set.addAsync("test");
+
+        const results: string[] = [];
+        const handler = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`${event.type}`);
+        });
+
+        set.onChange(handler);
+        await set.clearAsync();
+
+        expect(handler).toHaveBeenCalledWith({
+          type: "clear",
+          key: null,
+        });
+        expect(results).toEqual(["clear"]);
+      });
+
+      it("should not emit clear event when set is empty", async () => {
+        const handler = jest.fn();
+        set.onChange(handler);
+
+        await set.clearAsync();
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it("should handle errors in async handlers", async () => {
+        await set.addAsync("test");
+
+        const errorHandler = jest.fn().mockImplementation(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          throw new Error("Async handler error");
+        });
+
+        const normalHandler = jest.fn();
+        const consoleErrorSpy = jest
+          .spyOn(console, "error")
+          .mockImplementation();
+
+        set.onChange(errorHandler);
+        set.onChange(normalHandler);
+
+        await set.clearAsync();
+
+        expect(normalHandler).toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
+
+        consoleErrorSpy.mockRestore();
+      });
+    });
+
+    describe("async operation chaining", () => {
+      it("should support chaining multiple async operations", async () => {
+        const handler = jest.fn();
+        set.onChange(handler);
+
+        // Chain multiple async operations
+        await set
+          .addAsync("one")
+          .then(() => set.addAsync("two"))
+          .then(() => set.deleteAsync("one"));
+
+        expect(set.has("one")).toBe(false);
+        expect(set.has("two")).toBe(true);
+        expect(handler).toHaveBeenCalledTimes(3);
+      });
+    });
+
+    describe("async set operations", () => {
+      it("should handle async operations with set combinations", async () => {
+        const set1 = new ObservableSet(["a", "b"]);
+        const set2 = new ObservableSet(["b", "c"]);
+
+        const handler1 = jest.fn();
+        const handler2 = jest.fn();
+
+        set1.onChange(handler1);
+        set2.onChange(handler2);
+
+        // Perform operations on both sets asynchronously
+        await Promise.all([set1.addAsync("d"), set2.addAsync("d")]);
+
+        // Check union operation
+        const union = set1.union(set2);
+        expect(Array.from(union)).toEqual(["a", "b", "d", "c"]);
+
+        // Check intersection operation
+        const intersection = set1.intersection(set2);
+        expect(Array.from(intersection)).toEqual(["b", "d"]);
+
+        // Verify handlers were called correctly
+        expect(handler1).toHaveBeenCalledTimes(1);
+        expect(handler2).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
 });

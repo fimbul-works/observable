@@ -338,4 +338,216 @@ describe("ObservableMap", () => {
       expect(map.get("key")).toBeUndefined();
     });
   });
+
+  describe("async methods", () => {
+    let map: ObservableMap<string, number>;
+
+    beforeEach(() => {
+      map = new ObservableMap<string, number>();
+    });
+
+    describe("setAsync", () => {
+      it("should add a new key-value pair asynchronously", async () => {
+        const result = await map.setAsync("test", 42);
+
+        expect(map.get("test")).toBe(42);
+        expect(result).toBe(map);
+      });
+
+      it("should emit add event and wait for handlers", async () => {
+        const results: string[] = [];
+        const handler = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`${event.type}: ${event.key}=${event.value}`);
+        });
+
+        map.onChange(handler);
+        await map.setAsync("test", 42);
+
+        expect(handler).toHaveBeenCalledWith({
+          type: "add",
+          key: "test",
+          value: 42,
+          oldValue: undefined,
+        });
+        expect(results).toEqual(["add: test=42"]);
+      });
+
+      it("should emit update event for existing entries", async () => {
+        await map.setAsync("test", 42);
+
+        const handler = jest.fn();
+        map.onChange(handler);
+
+        await map.setAsync("test", 100);
+
+        expect(handler).toHaveBeenCalledWith({
+          type: "update",
+          key: "test",
+          value: 100,
+          oldValue: 42,
+        });
+      });
+
+      it("should not emit event when setting same value", async () => {
+        await map.setAsync("test", 42);
+
+        const handler = jest.fn();
+        map.onChange(handler);
+
+        await map.setAsync("test", 42);
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it("should wait for all async handlers", async () => {
+        const results: string[] = [];
+
+        const slowHandler1 = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          results.push(`first: ${event.type}`);
+        });
+
+        const slowHandler2 = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`second: ${event.type}`);
+        });
+
+        map.onChange(slowHandler1);
+        map.onChange(slowHandler2);
+
+        await map.setAsync("test", 42);
+
+        expect(results.length).toBe(2);
+        expect(results).toContain("first: add");
+        expect(results).toContain("second: add");
+      });
+    });
+
+    describe("deleteAsync", () => {
+      it("should remove existing entries asynchronously", async () => {
+        await map.setAsync("test", 42);
+        const result = await map.deleteAsync("test");
+
+        expect(result).toBe(true);
+        expect(map.has("test")).toBe(false);
+      });
+
+      it("should emit delete event and wait for handlers", async () => {
+        await map.setAsync("test", 42);
+
+        const results: string[] = [];
+        const handler = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`${event.type}: ${event.key}`);
+        });
+
+        map.onChange(handler);
+        await map.deleteAsync("test");
+
+        expect(handler).toHaveBeenCalledWith({
+          type: "delete",
+          key: "test",
+          oldValue: 42,
+        });
+        expect(results).toEqual(["delete: test"]);
+      });
+
+      it("should return false for non-existent keys", async () => {
+        const result = await map.deleteAsync("nonexistent");
+        expect(result).toBe(false);
+      });
+
+      it("should not emit event for non-existent keys", async () => {
+        const handler = jest.fn();
+        map.onChange(handler);
+
+        await map.deleteAsync("nonexistent");
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("clearAsync", () => {
+      it("should remove all entries asynchronously", async () => {
+        await map.setAsync("one", 1);
+        await map.setAsync("two", 2);
+
+        await map.clearAsync();
+
+        expect(map.size).toBe(0);
+        expect(map.has("one")).toBe(false);
+        expect(map.has("two")).toBe(false);
+      });
+
+      it("should emit clear event and wait for handlers", async () => {
+        await map.setAsync("test", 42);
+
+        const results: string[] = [];
+        const handler = jest.fn().mockImplementation(async (event) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`${event.type}`);
+        });
+
+        map.onChange(handler);
+        await map.clearAsync();
+
+        expect(handler).toHaveBeenCalledWith({
+          type: "clear",
+          key: null,
+        });
+        expect(results).toEqual(["clear"]);
+      });
+
+      it("should not emit clear event when map is empty", async () => {
+        const handler = jest.fn();
+        map.onChange(handler);
+
+        await map.clearAsync();
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      it("should handle errors in async handlers", async () => {
+        await map.setAsync("test", 42);
+
+        const errorHandler = jest.fn().mockImplementation(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          throw new Error("Async handler error");
+        });
+
+        const normalHandler = jest.fn();
+        const consoleErrorSpy = jest
+          .spyOn(console, "error")
+          .mockImplementation();
+
+        map.onChange(errorHandler);
+        map.onChange(normalHandler);
+
+        await map.clearAsync();
+
+        expect(normalHandler).toHaveBeenCalled();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
+
+        consoleErrorSpy.mockRestore();
+      });
+    });
+
+    describe("async operation chaining", () => {
+      it("should support chaining multiple async operations", async () => {
+        const handler = jest.fn();
+        map.onChange(handler);
+
+        // Chain multiple async operations
+        await map
+          .setAsync("one", 1)
+          .then(() => map.setAsync("two", 2))
+          .then(() => map.deleteAsync("one"));
+
+        expect(map.has("one")).toBe(false);
+        expect(map.has("two")).toBe(true);
+        expect(handler).toHaveBeenCalledTimes(3);
+      });
+    });
+  });
 });

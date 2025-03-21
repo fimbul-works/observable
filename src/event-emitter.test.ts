@@ -370,6 +370,178 @@ describe("EventEmitter", () => {
     });
   });
 
+  describe("EventEmitter async support", () => {
+    let emitter: EventEmitter<TestEvents>;
+    let mockCallback: jest.Mock;
+
+    beforeEach(() => {
+      emitter = new EventEmitter<TestEvents>();
+      mockCallback = jest.fn();
+    });
+
+    it("should handle async callbacks with emit", async () => {
+      const asyncCallback = jest
+        .fn()
+        .mockImplementation(async (data: string) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return `processed ${data}`;
+        });
+
+      emitter.on("test", asyncCallback);
+      emitter.emit("test", "hello");
+
+      // Even though we don't await emit, the callback should have been called
+      expect(asyncCallback).toHaveBeenCalledWith("hello");
+
+      // Allow async operations to complete
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    it("should handle mixed sync and async callbacks with emit", () => {
+      const syncCallback = jest.fn();
+      const asyncCallback = jest
+        .fn()
+        .mockImplementation(async (data: string) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return `processed ${data}`;
+        });
+
+      emitter.on("test", syncCallback);
+      emitter.on("test", asyncCallback);
+
+      emitter.emit("test", "hello");
+
+      expect(syncCallback).toHaveBeenCalledWith("hello");
+      expect(asyncCallback).toHaveBeenCalledWith("hello");
+    });
+
+    it("should wait for async handlers to complete with emitAsync", async () => {
+      const results: string[] = [];
+
+      const asyncCallback1 = jest
+        .fn()
+        .mockImplementation(async (data: string) => {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          results.push(`first ${data}`);
+        });
+
+      const asyncCallback2 = jest
+        .fn()
+        .mockImplementation(async (data: string) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          results.push(`second ${data}`);
+        });
+
+      emitter.on("test", asyncCallback1);
+      emitter.on("test", asyncCallback2);
+
+      await emitter.emitAsync("test", "hello");
+
+      // Both callbacks should have completed
+      expect(results).toContain("first hello");
+      expect(results).toContain("second hello");
+      expect(results.length).toBe(2);
+    });
+
+    it("should handle different event types with async callbacks", async () => {
+      const stringHandler = jest
+        .fn()
+        .mockImplementation(async (data: string) => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return data.toUpperCase();
+        });
+
+      const numberHandler = jest
+        .fn()
+        .mockImplementation(async (data: number) => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return data * 2;
+        });
+
+      const dataHandler = jest
+        .fn()
+        .mockImplementation(async (data: { id: number; value: string }) => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return { ...data, processed: true };
+        });
+
+      emitter.on("test", stringHandler);
+      emitter.on("count", numberHandler);
+      emitter.on("data", dataHandler);
+
+      await emitter.emitAsync("test", "hello");
+      await emitter.emitAsync("count", 42);
+      await emitter.emitAsync("data", { id: 1, value: "test" });
+
+      expect(stringHandler).toHaveBeenCalledWith("hello");
+      expect(numberHandler).toHaveBeenCalledWith(42);
+      expect(dataHandler).toHaveBeenCalledWith({ id: 1, value: "test" });
+    });
+
+    it("should handle async errors properly", async () => {
+      const errorHandler = jest.fn();
+      const asyncErrorCallback = jest
+        .fn()
+        .mockImplementation(async (data: string) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          throw new Error(`async error: ${data}`);
+        });
+
+      emitter.on("test", asyncErrorCallback);
+      emitter.onError("test", errorHandler);
+
+      await emitter.emitAsync("test", "hello");
+
+      expect(errorHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "async error: hello",
+        }),
+      );
+    });
+
+    it("should chain multiple emitAsync calls", async () => {
+      const results: string[] = [];
+
+      emitter.on("test", async (data: string) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        results.push(`test: ${data}`);
+      });
+
+      emitter.on("count", async (data: number) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        results.push(`count: ${data}`);
+      });
+
+      await emitter
+        .emitAsync("test", "hello")
+        .then((e) => e.emitAsync("count", 42));
+
+      expect(results).toEqual(["test: hello", "count: 42"]);
+    });
+
+    it("should properly clean up async handlers on destroy", async () => {
+      const asyncCallback = jest.fn().mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      });
+
+      emitter.on("test", asyncCallback);
+
+      // Verify handler is registered
+      emitter.emit("test", "before destroy");
+      expect(asyncCallback).toHaveBeenCalledWith("before destroy");
+
+      // Destroy emitter
+      emitter.destroy();
+
+      // Reset mock to check if it gets called after destroy
+      asyncCallback.mockClear();
+
+      // Verify handler doesn't get called after destroy
+      await emitter.emitAsync("test", "after destroy");
+      expect(asyncCallback).not.toHaveBeenCalled();
+    });
+  });
+
   describe("utility methods", () => {
     it("should return all registered events", () => {
       emitter.on("test", mockCallback);

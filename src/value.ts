@@ -34,22 +34,50 @@ export class ObservableValue<T> implements Observable<T> {
   /**
    * Updates the stored value and notifies observers.
    * @param newValue - The new value to store
+   * @returns {this}
    */
-  set(newValue: T): void {
+  set(newValue: T): this {
     if (!Object.is(this.#value, newValue)) {
       this.#value = newValue;
       this.#signal.emit(newValue);
     }
+    return this;
+  }
+
+  /**
+   * Updates the stored value and waits for all observer callbacks to complete.
+   * @param newValue - The new value to store
+   * @returns {Promise<this>}
+   */
+  async setAsync(newValue: T): Promise<this> {
+    if (!Object.is(this.#value, newValue)) {
+      this.#value = newValue;
+      await this.#signal.emitAsync(newValue);
+    }
+    return this;
   }
 
   /**
    * Updates the value using a transformation function and notifies observers.
    * The update is atomic - observers will only be notified once with the final value.
    * @param updateFn - Function that receives the current value and returns the new value
+   * @returns {this}
    */
-  update(updateFn: (current: T) => T): void {
+  update(updateFn: (current: T) => T): this {
     const newValue = updateFn(this.#value);
     this.set(newValue);
+    return this;
+  }
+
+  /**
+   * Updates the value using a transformation function and waits for all observer callbacks to complete.
+   * @param updateFn - Function that receives the current value and returns the new value
+   * @returns {Promise<this>}
+   */
+  async updateAsync(updateFn: (current: T) => T): Promise<this> {
+    const newValue = updateFn(this.#value);
+    await this.setAsync(newValue);
+    return this;
   }
 
   /**

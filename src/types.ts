@@ -16,12 +16,11 @@ export interface Observable<T> {
 }
 
 /**
- * Generic event handler function type.
- * @template T The type of data passed to the handler (defaults to unknown)
- * @param data The event data
- * @returns A Promise that resolves to void, or void
+ * Type for event handlers that can be synchronous or asynchronous
+ * @template T The data type for the event
+ * @template R The return type (void for sync, Promise<void> for async, or any other return type)
  */
-export type EventHandler<T = unknown> = (data: T) => Promise<void> | void;
+export type EventHandler<T = unknown, R = void> = (data: T) => R;
 
 /**
  * Error handler function type.
