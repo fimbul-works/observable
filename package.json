@@ -1,7 +1,7 @@
 {
   "name": "@fimbul-works/observable",
   "description": "A lightweight, strongly-typed TypeScript library for reactive programming patterns, providing observable collections, values, and event handling.",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "type": "module",
   "private": false,
   "license": "MIT",

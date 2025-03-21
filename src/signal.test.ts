@@ -174,6 +174,23 @@ describe("Signal", () => {
     });
   });
 
+  describe("destroy", () => {
+    it("should disconnect all listeners", () => {
+      const mockCallback2 = jest.fn();
+      const mockCallback3 = jest.fn();
+
+      signal.connect(mockCallback);
+      signal.connect(mockCallback2);
+      signal.connect(mockCallback3);
+
+      expect(signal.listenerCount()).toEqual(3);
+
+      signal.destroy();
+
+      expect(signal.listenerCount()).toEqual(0);
+    });
+  });
+
   describe("utility methods", () => {
     it("should report correct listener count", () => {
       expect(signal.listenerCount()).toBe(0);

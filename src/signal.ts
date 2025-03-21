@@ -123,6 +123,19 @@ export class Signal<T> {
   }
 
   /**
+   * Cleans up all event subscriptions and releases resources.
+   * Call this method when the event emitter is no longer needed.
+   */
+  destroy() {
+    for (const handler of this.#handlers) {
+      this.disconnect(handler);
+    }
+    for (const handler of this.#errorHandlers) {
+      this.disconnectError(handler);
+    }
+  }
+
+  /**
    * Internal method to handle errors from event handlers
    */
   #handleError(error: unknown): void {

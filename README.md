@@ -28,6 +28,75 @@ yarn add @fimbul-works/observable
 
 The library provides several observable patterns:
 
+### Signal
+
+A low-level primitive for implementing publish/subscribe patterns with error handling.
+
+Example:
+```typescript
+import { Signal } from '@fimbul-works/observable';
+
+const signal = new Signal<string>();
+
+// Connect handler with automatic cleanup
+const cleanup = signal.connect((message) => {
+  console.log(`Received: ${message}`);
+});
+
+// One-time handler
+signal.once((message) => {
+  console.log(`Received once: ${message}`);
+});
+
+// Error handling
+const errorCleanup = signal.connectError((error) => {
+  console.error('Handler error:', error);
+});
+
+signal.emit('Hello!');
+
+// Cleanup handlers and resources when done
+signal.destroy();
+
+// Or remove specific listeners
+cleanup();
+errorCleanup();
+```
+
+### EventEmitter
+
+A strongly-typed event emitter for handling multiple event types.
+
+```typescript
+import { EventEmitter } from '@fimbul-works/observable';
+
+// Define your event types
+interface AppEvents {
+  userLogin: { userId: string, timestamp: number };
+  error: Error;
+  notify: string;
+}
+
+// Create an event emitter with typed events
+const events = new EventEmitter<AppEvents>();
+
+// Subscribe with cleanup function
+const cleanup = events.on('userLogin', ({ userId, timestamp }) => {
+  console.log(`User ${userId} logged in at ${timestamp}`);
+});
+
+const errorCleanup = events.onError('userLogin', (error) => {
+  console.error('Error in login handler:', error);
+});
+
+// Emit events with type-safe payloads
+events.emit('userLogin', { userId: 'alice', timestamp: Date.now() });
+
+// Cleanup when done
+cleanup();
+errorCleanup();
+```
+
 ### ObservableValue
 
 A simple value container that notifies observers when the value changes.
@@ -113,63 +182,6 @@ plugins.register('logger', new LoggerPlugin());
 const logger = plugins.get('logger');
 ```
 
-### EventEmitter
-
-A strongly-typed event emitter for handling multiple event types.
-
-```typescript
-import { EventEmitter } from '@fimbul-works/observable';
-
-const events = new EventEmitter<AppEvents>(['userLogin', 'error', 'notify']);
-
-// Subscribe with cleanup function
-const cleanup = events.on('userLogin', ({ userId, timestamp }) => {
-  console.log(`User ${userId} logged in at ${timestamp}`);
-});
-
-const errorCleanup = events.onError('userLogin', (error) => {
-  console.error('Error in login handler:', error);
-});
-
-events.emit('userLogin', { userId: 'alice', timestamp: Date.now() });
-
-// Cleanup when done
-cleanup();
-errorCleanup();
-```
-
-### Signal
-
-A low-level primitive for implementing publish/subscribe patterns with error handling.
-
-Example:
-```typescript
-import { Signal } from '@fimbul-works/observable';
-
-const signal = new Signal<string>();
-
-// Connect handler with automatic cleanup
-const cleanup = signal.connect((message) => {
-  console.log(`Received: ${message}`);
-});
-
-// One-time handler
-signal.once((message) => {
-  console.log(`Received once: ${message}`);
-});
-
-// Error handling
-const errorCleanup = signal.connectError((error) => {
-  console.error('Handler error:', error);
-});
-
-signal.emit('Hello!');
-
-// Cleanup when done
-cleanup();
-errorCleanup();
-```
-
 ## API Documentation
 
 ### ObservableValue<T>
@@ -177,7 +189,7 @@ errorCleanup();
 - `constructor(initial: T)`: Creates a new observable value
 - `get(): T`: Returns the current value
 - `set(newValue: T): void`: Updates the value and notifies observers
-- `onChange(fn: (value: T) => void): () => void`: Subscribes to value changes
+- `onChange(fn: (value: T) => void): () => void`: Subscribes to value changes and returns cleanup function
 
 ### ObservableMap<K, V>
 
@@ -187,7 +199,7 @@ errorCleanup();
 - `clear(): void`: Removes all entries
 - `has(key: K): boolean`: Checks if a key exists
 - `size: number`: Number of entries in the map
-- `onChange(fn: (event: CollectionEvent<K, V>) => void): () => void`: Subscribes to changes
+- `onChange(fn: (event: CollectionEvent<K, V>) => void): () => void`: Subscribes to changes and returns cleanup function
 
 ### ObservableSet<T>
 
@@ -197,7 +209,7 @@ errorCleanup();
 - `clear(): void`: Removes all values
 - `size(): number`: Number of values in the set
 - `values(): IterableIterator<T>`: Returns an iterator of values
-- `onChange(fn: (event: CollectionEvent<T, boolean>) => void): () => void`: Subscribes to changes
+- `onChange(fn: (event: CollectionEvent<T, boolean>) => void): () => void`: Subscribes to changes and returns cleanup function
 
 ### ObservableRegistry<K, V>
 
@@ -206,24 +218,33 @@ Extends ObservableMap with:
 - `unregister(key: K): boolean`: Removes a registration
 - `get(key: K): V`: Gets a value (throws if key doesn't exist)
 
-### EventEmitter<T extends EventMap>
+### EventEmitter<EventMap>
 
-- `on<K extends keyof T>(event: K, fn: (data: T[K]) => void): this`: Subscribes to an event
-- `off<K extends keyof T>(event: K, fn: (data: T[K]) => void): this`: Unsubscribes from an event
-- `emit<K extends keyof T>(event: K, data?: T[K]): this`: Emits an event
-- `onError<K extends keyof T>(event: K, fn: (error: Error) => void): this`: Handles errors for an event
+- `on<K extends keyof EventMap>(event: K, fn: (data: EventMap[K]) => void): () => void`: Subscribes to an event and returns cleanup function
+- `off<K extends keyof EventMap>(event: K, fn: (data: EventMap[K]) => void): void`: Unsubscribes from an event
+- `emit<K extends keyof EventMap>(event: K, data?: EventMap[K]): this`: Emits an event with type-safe payload
+- `onError<K extends keyof EventMap>(event: K, fn: (error: Error) => void): () => void`: Handles errors for an event and returns cleanup function
+- `offError<K extends keyof EventMap>(event: K, fn: (error: Error) => void): this`: Removes error handler
+- `getEvents(): Array<keyof EventMap>`: Returns all registered event names
 - `destroy(): void`: Cleans up all subscriptions
 
 ### Signal<T>
 
 - `connect(fn: (data: T) => void): () => void`: Adds an event handler and returns cleanup function
 - `once(fn: (data: T) => void): () => void`: Adds a one-time event handler and returns cleanup function
-- `disconnect(fn?: (data: T) => void): void`: Removes specific handler or all handlers
+- `disconnect(fn?: (data: T) => void): this`: Removes specific handler or all handlers
 - `emit(data: T): number`: Emits data to all handlers, returns number of handlers called
 - `connectError(fn: (error: Error) => void): () => void`: Adds error handler and returns cleanup function
-- `disconnectError(fn: (error: Error) => void): void`: Removes error handler
+- `disconnectError(fn: (error: Error) => void): this`: Removes error handler
 - `hasHandlers(): boolean`: Checks if there are any active handlers
 - `listenerCount(): number`: Returns the total number of handlers
+- `destroy(): void`: Cleans up all subscriptions and releases resources
+
+## Breaking Changes in v2.0.0
+
+- **EventEmitter Changes**: The `EventEmitter` constructor no longer accepts an events array. Events are now dynamically registered when handlers are attached using `on()` or `onError()`.
+- **Type Safety**: The `EventEmitter` class now provides stricter type safety for event data while allowing more flexible usage patterns.
+- **Signal Enhancements**: Added a `destroy()` method to properly clean up resources.
 
 ## License
 
