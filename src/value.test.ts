@@ -1,10 +1,11 @@
-import { ObservableValue } from "./value";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ObservableValue } from "./value.js";
 
 describe("ObservableValue", () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -54,7 +55,7 @@ describe("ObservableValue", () => {
 
     it("should not notify observers when setting the same value", () => {
       const observable = new ObservableValue("test");
-      const handler = jest.fn();
+      const handler = vi.fn();
 
       observable.onChange(handler);
       observable.set("test");
@@ -64,7 +65,7 @@ describe("ObservableValue", () => {
 
     it("should handle Object.is edge cases", () => {
       const observable = new ObservableValue(0);
-      const handler = jest.fn();
+      const handler = vi.fn();
       observable.onChange(handler);
 
       // -0 and +0 are different in Object.is
@@ -73,7 +74,7 @@ describe("ObservableValue", () => {
 
       // NaN is equal to itself in Object.is
       const nanObservable = new ObservableValue(Number.NaN);
-      const nanHandler = jest.fn();
+      const nanHandler = vi.fn();
       nanObservable.onChange(nanHandler);
       nanObservable.set(Number.NaN);
       expect(nanHandler).not.toHaveBeenCalled();
@@ -89,7 +90,7 @@ describe("ObservableValue", () => {
 
     it("should notify observers only once", () => {
       const observable = new ObservableValue(1);
-      const handler = jest.fn();
+      const handler = vi.fn();
       observable.onChange(handler);
 
       observable.update((val) => val + 1);
@@ -100,7 +101,7 @@ describe("ObservableValue", () => {
 
     it("should not notify if transform returns same value", () => {
       const observable = new ObservableValue(42);
-      const handler = jest.fn();
+      const handler = vi.fn();
       observable.onChange(handler);
 
       observable.update((val) => val);
@@ -110,7 +111,7 @@ describe("ObservableValue", () => {
 
     it("should handle errors in transform function", () => {
       const observable = new ObservableValue(1);
-      const handler = jest.fn();
+      const handler = vi.fn();
       observable.onChange(handler);
 
       expect(() =>
@@ -127,7 +128,7 @@ describe("ObservableValue", () => {
   describe("subscribe", () => {
     it("should immediately call subscriber with current value", () => {
       const observable = new ObservableValue("initial");
-      const handler = jest.fn();
+      const handler = vi.fn();
 
       observable.subscribe(handler);
       expect(handler).toHaveBeenCalledWith("initial");
@@ -135,7 +136,7 @@ describe("ObservableValue", () => {
 
     it("should notify subscriber of subsequent changes", () => {
       const observable = new ObservableValue("initial");
-      const handler = jest.fn();
+      const handler = vi.fn();
 
       observable.subscribe(handler);
       observable.set("updated");
@@ -147,7 +148,7 @@ describe("ObservableValue", () => {
 
     it("should return working unsubscribe function", () => {
       const observable = new ObservableValue("test");
-      const handler = jest.fn();
+      const handler = vi.fn();
 
       const unsubscribe = observable.subscribe(handler);
       expect(handler).toHaveBeenCalledWith("test");
@@ -183,8 +184,8 @@ describe("ObservableValue", () => {
       const observable = new ObservableValue(1);
       const doubled = observable.map((x) => x * 2);
       const squared = observable.map((x) => x * x);
-      const doubledHandler = jest.fn();
-      const squaredHandler = jest.fn();
+      const doubledHandler = vi.fn();
+      const squaredHandler = vi.fn();
 
       doubled.onChange(doubledHandler);
       squared.onChange(squaredHandler);
@@ -229,10 +230,10 @@ describe("ObservableValue", () => {
 
     it("should handle errors in observers gracefully", () => {
       const observable = new ObservableValue("test");
-      const errorHandler = jest.fn(() => {
+      const errorHandler = vi.fn(() => {
         throw new Error("Observer error");
       });
-      const normalHandler = jest.fn();
+      const normalHandler = vi.fn();
 
       observable.onChange(errorHandler);
       observable.onChange(normalHandler);
@@ -253,7 +254,7 @@ describe("ObservableValue", () => {
 
     describe("setAsync", () => {
       it("should update value and notify observers asynchronously", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         observable.onChange(handler);
 
         await observable.setAsync(20);
@@ -263,7 +264,7 @@ describe("ObservableValue", () => {
       });
 
       it("should not notify when setting the same value", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         observable.onChange(handler);
 
         await observable.setAsync(10);
@@ -274,7 +275,7 @@ describe("ObservableValue", () => {
 
       it("should wait for async handlers to complete", async () => {
         const results: number[] = [];
-        const slowHandler = jest
+        const slowHandler = vi
           .fn()
           .mockImplementation(async (value: number) => {
             await new Promise((resolve) => setTimeout(resolve, 20));
@@ -288,15 +289,15 @@ describe("ObservableValue", () => {
       });
 
       it("should handle errors in async handlers", async () => {
-        const errorHandler = jest.fn().mockImplementation(async () => {
+        const errorHandler = vi.fn().mockImplementation(async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           throw new Error("Async handler error");
         });
-        const normalHandler = jest.fn();
+        const normalHandler = vi.fn();
 
-        const consoleErrorSpy = jest
+        const consoleErrorSpy = vi
           .spyOn(console, "error")
-          .mockImplementation();
+          .mockImplementation(() => {});
 
         observable.onChange(errorHandler);
         observable.onChange(normalHandler);
@@ -312,7 +313,7 @@ describe("ObservableValue", () => {
 
     describe("updateAsync", () => {
       it("should update value using transform function and notify asynchronously", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         observable.onChange(handler);
 
         await observable.updateAsync((val) => val * 2);
@@ -322,7 +323,7 @@ describe("ObservableValue", () => {
       });
 
       it("should not notify if transform returns same value", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         observable.onChange(handler);
 
         await observable.updateAsync((val) => val);
@@ -334,14 +335,14 @@ describe("ObservableValue", () => {
       it("should wait for all async handlers", async () => {
         const results: string[] = [];
 
-        const slowHandler1 = jest
+        const slowHandler1 = vi
           .fn()
           .mockImplementation(async (value: number) => {
             await new Promise((resolve) => setTimeout(resolve, 30));
             results.push(`first: ${value}`);
           });
 
-        const slowHandler2 = jest
+        const slowHandler2 = vi
           .fn()
           .mockImplementation(async (value: number) => {
             await new Promise((resolve) => setTimeout(resolve, 10));
@@ -359,7 +360,7 @@ describe("ObservableValue", () => {
       });
 
       it("should handle errors in transform function", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         observable.onChange(handler);
 
         await expect(
@@ -377,7 +378,7 @@ describe("ObservableValue", () => {
     describe("async integration with derived observables", () => {
       it("should propagate async updates to derived observables", async () => {
         const doubled = observable.map((x) => x * 2);
-        const doubledHandler = jest.fn();
+        const doubledHandler = vi.fn();
 
         doubled.onChange(doubledHandler);
 
@@ -393,7 +394,7 @@ describe("ObservableValue", () => {
         const asString = plusOne.map((x) => `Value: ${x}`);
 
         const results: string[] = [];
-        const stringHandler = jest
+        const stringHandler = vi
           .fn()
           .mockImplementation(async (value: string) => {
             await new Promise((resolve) => setTimeout(resolve, 10));

@@ -1,5 +1,5 @@
-import type { Observable } from "./types";
-import { Signal } from "./signal";
+import type { Observable } from "./types.js";
+import { Signal } from "./signal.js";
 
 /**
  * Represents a value that can be observed for changes.

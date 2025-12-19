@@ -1,4 +1,4 @@
-import type { ErrorHandler, EventHandler } from "./types";
+import type { ErrorHandler, EventHandler } from "./types.js";
 
 /**
  * Signal class implements a publish/subscribe pattern for event handling with error management

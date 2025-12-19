@@ -1,4 +1,5 @@
-import { ObservableRegistry } from "./registry";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ObservableRegistry } from "./registry.js";
 
 describe("ObservableRegistry", () => {
   let registry: ObservableRegistry<string, number>;
@@ -26,7 +27,7 @@ describe("ObservableRegistry", () => {
     });
 
     it("should emit an add event", () => {
-      const handler = jest.fn();
+      const handler = vi.fn();
       registry.onChange(handler);
 
       registry.register("test", 123);
@@ -55,7 +56,7 @@ describe("ObservableRegistry", () => {
     });
 
     it("should emit a delete event", () => {
-      const handler = jest.fn();
+      const handler = vi.fn();
       registry.register("test", 123);
       registry.onChange(handler);
 
@@ -69,7 +70,7 @@ describe("ObservableRegistry", () => {
     });
 
     it("should not emit an event when key does not exist", () => {
-      const handler = jest.fn();
+      const handler = vi.fn();
       registry.onChange(handler);
 
       registry.unregister("nonexistent");
@@ -129,7 +130,7 @@ describe("ObservableRegistry", () => {
       registry.register("one", 1);
       registry.register("two", 2);
 
-      const handler = jest.fn();
+      const handler = vi.fn();
       registry.onChange(handler);
 
       registry.clear();
@@ -145,8 +146,8 @@ describe("ObservableRegistry", () => {
 
   describe("observer functionality", () => {
     it("should allow multiple observers", () => {
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
 
       registry.onChange(handler1);
       registry.onChange(handler2);
@@ -158,7 +159,7 @@ describe("ObservableRegistry", () => {
     });
 
     it("should allow observer removal", () => {
-      const handler = jest.fn();
+      const handler = vi.fn();
       const unsubscribe = registry.onChange(handler);
 
       registry.register("test", 123);
@@ -187,7 +188,7 @@ describe("ObservableRegistry", () => {
 
       it("should emit add event and wait for handlers", async () => {
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}=${event.value}`);
         });
@@ -215,12 +216,12 @@ describe("ObservableRegistry", () => {
       it("should wait for all async handlers", async () => {
         const results: string[] = [];
 
-        const slowHandler1 = jest.fn().mockImplementation(async (event) => {
+        const slowHandler1 = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 30));
           results.push(`first: ${event.type}`);
         });
 
-        const slowHandler2 = jest.fn().mockImplementation(async (event) => {
+        const slowHandler2 = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`second: ${event.type}`);
         });
@@ -249,7 +250,7 @@ describe("ObservableRegistry", () => {
         await registry.registerAsync("test", 123);
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}`);
         });
@@ -271,7 +272,7 @@ describe("ObservableRegistry", () => {
       });
 
       it("should not emit an event when key does not exist", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         registry.onChange(handler);
 
         await registry.unregisterAsync("nonexistent");
@@ -293,7 +294,7 @@ describe("ObservableRegistry", () => {
         await registry.registerAsync("test", 123);
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}=${event.value}`);
         });
@@ -333,7 +334,7 @@ describe("ObservableRegistry", () => {
         await registry.registerAsync("test", 10);
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}=${event.value}`);
         });
@@ -386,7 +387,7 @@ describe("ObservableRegistry", () => {
         await registry.registerAsync("test", 123);
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}`);
         });
@@ -404,7 +405,7 @@ describe("ObservableRegistry", () => {
 
     describe("async operation chaining", () => {
       it("should support chaining multiple async operations", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         registry.onChange(handler);
 
         // Chain multiple async operations
@@ -422,15 +423,15 @@ describe("ObservableRegistry", () => {
 
     describe("error handling", () => {
       it("should handle errors in async handlers", async () => {
-        const errorHandler = jest.fn().mockImplementation(async () => {
+        const errorHandler = vi.fn().mockImplementation(async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           throw new Error("Async handler error");
         });
 
-        const normalHandler = jest.fn();
-        const consoleErrorSpy = jest
+        const normalHandler = vi.fn();
+        const consoleErrorSpy = vi
           .spyOn(console, "error")
-          .mockImplementation();
+          .mockImplementation(() => {});
 
         registry.onChange(errorHandler);
         registry.onChange(normalHandler);
@@ -461,7 +462,7 @@ describe("ObservableRegistry", () => {
 
     describe("inherited async methods", () => {
       it("should inherit setAsync from ObservableMap", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         registry.onChange(handler);
 
         // Using the inherited setAsync method (which bypasses registration check)

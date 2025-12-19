@@ -1,5 +1,13 @@
-import { EventEmitter } from "./event-emitter";
-import type { EventHandler } from "./types";
+import {
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockedFunction,
+  vi,
+} from "vitest";
+import { EventEmitter } from "./event-emitter.js";
+import type { EventHandler } from "./types.js";
 
 interface TestEvents {
   test: string;
@@ -9,13 +17,13 @@ interface TestEvents {
 
 describe("EventEmitter", () => {
   let emitter: EventEmitter<TestEvents>;
-  let mockCallback: jest.Mock;
-  let mockErrorHandler: jest.Mock;
+  let mockCallback: MockedFunction<EventHandler>;
+  let mockErrorHandler: MockedFunction<EventHandler>;
 
   beforeEach(() => {
     emitter = new EventEmitter<TestEvents>();
-    mockCallback = jest.fn();
-    mockErrorHandler = jest.fn();
+    mockCallback = vi.fn();
+    mockErrorHandler = vi.fn();
   });
 
   describe("on/off", () => {
@@ -26,7 +34,7 @@ describe("EventEmitter", () => {
     });
 
     it("should allow multiple handlers per event", () => {
-      const mockCallback2 = jest.fn();
+      const mockCallback2 = vi.fn();
       emitter.on("test", mockCallback);
       emitter.on("test", mockCallback2);
 
@@ -50,8 +58,8 @@ describe("EventEmitter", () => {
     });
 
     it("should maintain separate handlers for different events", () => {
-      const testHandler = jest.fn();
-      const countHandler = jest.fn();
+      const testHandler = vi.fn();
+      const countHandler = vi.fn();
 
       emitter.on("test", testHandler);
       emitter.on("count", countHandler);
@@ -88,7 +96,9 @@ describe("EventEmitter", () => {
       emitter.onError("test", mockErrorHandler);
       emitter.offError("test", mockErrorHandler);
 
-      const consoleLogSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleLogSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       emitter.emit("test", "hello");
 
       expect(mockErrorHandler).not.toHaveBeenCalled();
@@ -101,7 +111,7 @@ describe("EventEmitter", () => {
       const throwingCallback = () => {
         throw new Error("test error");
       };
-      const mockErrorHandler2 = jest.fn();
+      const mockErrorHandler2 = vi.fn();
 
       emitter.on("test", throwingCallback);
       emitter.onError("test", mockErrorHandler);
@@ -123,9 +133,9 @@ describe("EventEmitter", () => {
 
   describe("type safety", () => {
     it("should handle different event types correctly", () => {
-      const stringHandler = jest.fn();
-      const numberHandler = jest.fn();
-      const dataHandler = jest.fn();
+      const stringHandler = vi.fn();
+      const numberHandler = vi.fn();
+      const dataHandler = vi.fn();
 
       emitter.on("test", stringHandler);
       emitter.on("count", numberHandler);
@@ -196,12 +206,12 @@ describe("EventEmitter", () => {
 
   describe("EventEmitter with arbitrary events", () => {
     let emitter: EventEmitter<TestEvents>;
-    let mockCallback: jest.Mock;
+    let mockCallback: MockedFunction<EventHandler>;
 
     beforeEach(() => {
       // Initialize with empty events array
       emitter = new EventEmitter();
-      mockCallback = jest.fn();
+      mockCallback = vi.fn();
     });
 
     it("should allow adding arbitrary events via on() when initialized with empty array", () => {
@@ -230,9 +240,9 @@ describe("EventEmitter", () => {
 
     it("should maintain type safety with arbitrary events", () => {
       // Register strongly-typed handlers
-      const stringHandler = jest.fn();
-      const numberHandler = jest.fn();
-      const dataHandler = jest.fn();
+      const stringHandler = vi.fn();
+      const numberHandler = vi.fn();
+      const dataHandler = vi.fn();
 
       emitter.on("test", stringHandler);
       emitter.on("count", numberHandler);
@@ -250,7 +260,7 @@ describe("EventEmitter", () => {
     });
 
     it("should allow registering error handlers for arbitrary events", () => {
-      const errorHandler = jest.fn();
+      const errorHandler = vi.fn();
       const throwingCallback = () => {
         throw new Error("test error");
       };
@@ -284,7 +294,7 @@ describe("EventEmitter", () => {
     });
 
     it("should allow removing error handlers for arbitrary events", () => {
-      const errorHandler = jest.fn();
+      const errorHandler = vi.fn();
       const throwingCallback = () => {
         throw new Error("test error");
       };
@@ -297,7 +307,9 @@ describe("EventEmitter", () => {
       emitter.offError("test", errorHandler);
 
       // Verify error handler was removed
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       emitter.emit("test", "hello");
       expect(errorHandler).not.toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -307,8 +319,8 @@ describe("EventEmitter", () => {
     it("should not affect existing events when adding new arbitrary events", () => {
       // Initialize with some events
       const initialEmitter = new EventEmitter<TestEvents>();
-      const callback1 = jest.fn();
-      const callback2 = jest.fn();
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
 
       // Register handler for initial event
       initialEmitter.on("test", callback1);
@@ -372,20 +384,18 @@ describe("EventEmitter", () => {
 
   describe("EventEmitter async support", () => {
     let emitter: EventEmitter<TestEvents>;
-    let mockCallback: jest.Mock;
+    let mockCallback: MockedFunction<EventHandler>;
 
     beforeEach(() => {
       emitter = new EventEmitter<TestEvents>();
-      mockCallback = jest.fn();
+      mockCallback = vi.fn();
     });
 
     it("should handle async callbacks with emit", async () => {
-      const asyncCallback = jest
-        .fn()
-        .mockImplementation(async (data: string) => {
-          await new Promise((resolve) => setTimeout(resolve, 10));
-          return `processed ${data}`;
-        });
+      const asyncCallback = vi.fn().mockImplementation(async (data: string) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return `processed ${data}`;
+      });
 
       emitter.on("test", asyncCallback);
       emitter.emit("test", "hello");
@@ -398,13 +408,11 @@ describe("EventEmitter", () => {
     });
 
     it("should handle mixed sync and async callbacks with emit", () => {
-      const syncCallback = jest.fn();
-      const asyncCallback = jest
-        .fn()
-        .mockImplementation(async (data: string) => {
-          await new Promise((resolve) => setTimeout(resolve, 10));
-          return `processed ${data}`;
-        });
+      const syncCallback = vi.fn();
+      const asyncCallback = vi.fn().mockImplementation(async (data: string) => {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return `processed ${data}`;
+      });
 
       emitter.on("test", syncCallback);
       emitter.on("test", asyncCallback);
@@ -418,14 +426,14 @@ describe("EventEmitter", () => {
     it("should wait for async handlers to complete with emitAsync", async () => {
       const results: string[] = [];
 
-      const asyncCallback1 = jest
+      const asyncCallback1 = vi
         .fn()
         .mockImplementation(async (data: string) => {
           await new Promise((resolve) => setTimeout(resolve, 20));
           results.push(`first ${data}`);
         });
 
-      const asyncCallback2 = jest
+      const asyncCallback2 = vi
         .fn()
         .mockImplementation(async (data: string) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
@@ -444,21 +452,17 @@ describe("EventEmitter", () => {
     });
 
     it("should handle different event types with async callbacks", async () => {
-      const stringHandler = jest
-        .fn()
-        .mockImplementation(async (data: string) => {
-          await new Promise((resolve) => setTimeout(resolve, 5));
-          return data.toUpperCase();
-        });
+      const stringHandler = vi.fn().mockImplementation(async (data: string) => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return data.toUpperCase();
+      });
 
-      const numberHandler = jest
-        .fn()
-        .mockImplementation(async (data: number) => {
-          await new Promise((resolve) => setTimeout(resolve, 5));
-          return data * 2;
-        });
+      const numberHandler = vi.fn().mockImplementation(async (data: number) => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return data * 2;
+      });
 
-      const dataHandler = jest
+      const dataHandler = vi
         .fn()
         .mockImplementation(async (data: { id: number; value: string }) => {
           await new Promise((resolve) => setTimeout(resolve, 5));
@@ -479,8 +483,8 @@ describe("EventEmitter", () => {
     });
 
     it("should handle async errors properly", async () => {
-      const errorHandler = jest.fn();
-      const asyncErrorCallback = jest
+      const errorHandler = vi.fn();
+      const asyncErrorCallback = vi
         .fn()
         .mockImplementation(async (data: string) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
@@ -520,7 +524,7 @@ describe("EventEmitter", () => {
     });
 
     it("should properly clean up async handlers on destroy", async () => {
-      const asyncCallback = jest.fn().mockImplementation(async () => {
+      const asyncCallback = vi.fn().mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
       });
 

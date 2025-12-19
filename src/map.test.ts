@@ -1,12 +1,13 @@
-import { ObservableMap } from "./map";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ObservableMap } from "./map.js";
 
 describe("ObservableMap", () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   let map: ObservableMap<string, number>;
 
   beforeEach(() => {
     map = new ObservableMap();
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -57,7 +58,7 @@ describe("ObservableMap", () => {
       });
 
       it("should emit add event for new entries", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
 
         map.set("test", 42);
@@ -71,7 +72,7 @@ describe("ObservableMap", () => {
       });
 
       it("should emit update event for existing entries", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.set("test", 42);
         map.onChange(handler);
 
@@ -86,7 +87,7 @@ describe("ObservableMap", () => {
       });
 
       it("should not emit event when setting same value", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.set("test", 42);
         map.onChange(handler);
 
@@ -139,7 +140,7 @@ describe("ObservableMap", () => {
       });
 
       it("should emit delete event for existing entries", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.set("test", 42);
         map.onChange(handler);
 
@@ -158,7 +159,7 @@ describe("ObservableMap", () => {
       });
 
       it("should not emit event for non-existent keys", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
 
         map.delete("nonexistent");
@@ -178,7 +179,7 @@ describe("ObservableMap", () => {
       });
 
       it("should emit clear event", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.set("test", 42);
         map.onChange(handler);
 
@@ -191,7 +192,7 @@ describe("ObservableMap", () => {
       });
 
       it("should not emit clear event when map is empty", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
         map.clear();
         expect(handler).not.toHaveBeenCalled();
@@ -237,7 +238,7 @@ describe("ObservableMap", () => {
 
     it("should execute forEach with correct arguments and context", () => {
       const context = { test: true };
-      const spy = jest.fn();
+      const spy = vi.fn();
       map.forEach(spy, context);
 
       expect(spy).toHaveBeenCalledTimes(3);
@@ -251,8 +252,8 @@ describe("ObservableMap", () => {
 
   describe("observer functionality", () => {
     it("should support multiple observers", () => {
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
 
       map.onChange(handler1);
       map.onChange(handler2);
@@ -263,7 +264,7 @@ describe("ObservableMap", () => {
     });
 
     it("should allow observer removal", () => {
-      const handler = jest.fn();
+      const handler = vi.fn();
       const unsubscribe = map.onChange(handler);
 
       map.set("first", 1);
@@ -274,10 +275,10 @@ describe("ObservableMap", () => {
     });
 
     it("should handle observer errors gracefully", () => {
-      const errorHandler = jest.fn(() => {
+      const errorHandler = vi.fn(() => {
         throw new Error("Observer error");
       });
-      const normalHandler = jest.fn();
+      const normalHandler = vi.fn();
 
       map.onChange(errorHandler);
       map.onChange(normalHandler);
@@ -307,7 +308,7 @@ describe("ObservableMap", () => {
       }
 
       const userMap = new ObservableMap<string, User>();
-      const handler = jest.fn();
+      const handler = vi.fn();
       userMap.onChange(handler);
 
       userMap.set("user1", { id: 1, name: "Alice" });
@@ -356,7 +357,7 @@ describe("ObservableMap", () => {
 
       it("should emit add event and wait for handlers", async () => {
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}=${event.value}`);
         });
@@ -376,7 +377,7 @@ describe("ObservableMap", () => {
       it("should emit update event for existing entries", async () => {
         await map.setAsync("test", 42);
 
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
 
         await map.setAsync("test", 100);
@@ -392,7 +393,7 @@ describe("ObservableMap", () => {
       it("should not emit event when setting same value", async () => {
         await map.setAsync("test", 42);
 
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
 
         await map.setAsync("test", 42);
@@ -403,12 +404,12 @@ describe("ObservableMap", () => {
       it("should wait for all async handlers", async () => {
         const results: string[] = [];
 
-        const slowHandler1 = jest.fn().mockImplementation(async (event) => {
+        const slowHandler1 = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 30));
           results.push(`first: ${event.type}`);
         });
 
-        const slowHandler2 = jest.fn().mockImplementation(async (event) => {
+        const slowHandler2 = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`second: ${event.type}`);
         });
@@ -437,7 +438,7 @@ describe("ObservableMap", () => {
         await map.setAsync("test", 42);
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}`);
         });
@@ -459,7 +460,7 @@ describe("ObservableMap", () => {
       });
 
       it("should not emit event for non-existent keys", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
 
         await map.deleteAsync("nonexistent");
@@ -484,7 +485,7 @@ describe("ObservableMap", () => {
         await map.setAsync("test", 42);
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}`);
         });
@@ -500,7 +501,7 @@ describe("ObservableMap", () => {
       });
 
       it("should not emit clear event when map is empty", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
 
         await map.clearAsync();
@@ -511,15 +512,15 @@ describe("ObservableMap", () => {
       it("should handle errors in async handlers", async () => {
         await map.setAsync("test", 42);
 
-        const errorHandler = jest.fn().mockImplementation(async () => {
+        const errorHandler = vi.fn().mockImplementation(async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           throw new Error("Async handler error");
         });
 
-        const normalHandler = jest.fn();
-        const consoleErrorSpy = jest
+        const normalHandler = vi.fn();
+        const consoleErrorSpy = vi
           .spyOn(console, "error")
-          .mockImplementation();
+          .mockImplementation(() => {});
 
         map.onChange(errorHandler);
         map.onChange(normalHandler);
@@ -535,7 +536,7 @@ describe("ObservableMap", () => {
 
     describe("async operation chaining", () => {
       it("should support chaining multiple async operations", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         map.onChange(handler);
 
         // Chain multiple async operations

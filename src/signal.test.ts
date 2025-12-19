@@ -1,20 +1,30 @@
-import { Signal } from "./signal";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockedFunction,
+  vi,
+} from "vitest";
+import { Signal } from "./signal.js";
+import type { EventHandler } from "./types.js";
 
 describe("Signal", () => {
   let signal: Signal<string>;
-  let mockCallback: jest.Mock;
-  let mockErrorHandler: jest.Mock;
-  let consoleErrorSpy: jest.SpyInstance;
+  let mockCallback: MockedFunction<EventHandler>;
+  let mockErrorHandler: MockedFunction<EventHandler>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     signal = new Signal<string>();
-    mockCallback = jest.fn();
-    mockErrorHandler = jest.fn();
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+    mockCallback = vi.fn();
+    mockErrorHandler = vi.fn();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     consoleErrorSpy.mockRestore();
   });
 
@@ -40,8 +50,8 @@ describe("Signal", () => {
     });
 
     it("should disconnect all handlers when called without argument", () => {
-      const mockCallback2 = jest.fn();
-      const mockCallback3 = jest.fn();
+      const mockCallback2 = vi.fn();
+      const mockCallback3 = vi.fn();
 
       signal.connect(mockCallback);
       signal.connect(mockCallback2);
@@ -68,7 +78,7 @@ describe("Signal", () => {
     });
 
     it("should handle error in one-time callback", () => {
-      const throwingCallback = jest.fn().mockImplementation(() => {
+      const throwingCallback = vi.fn().mockImplementation(() => {
         throw new Error("test error");
       });
 
@@ -93,7 +103,7 @@ describe("Signal", () => {
 
   describe("emit", () => {
     it("should return number of handled callbacks", () => {
-      const mockCallback2 = jest.fn();
+      const mockCallback2 = vi.fn();
       signal.connect(mockCallback);
       signal.connect(mockCallback2);
 
@@ -102,7 +112,7 @@ describe("Signal", () => {
     });
 
     it("should handle multiple callbacks and errors", () => {
-      const mockCallback2 = jest.fn();
+      const mockCallback2 = vi.fn();
       const throwingCallback = () => {
         throw new Error("test error");
       };
@@ -138,7 +148,7 @@ describe("Signal", () => {
 
   describe("async handlers", () => {
     it("should handle async callbacks with emit", async () => {
-      const asyncCallback = jest.fn().mockImplementation(async (data) => {
+      const asyncCallback = vi.fn().mockImplementation(async (data) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         return `processed ${data}`;
       });
@@ -154,8 +164,8 @@ describe("Signal", () => {
     });
 
     it("should handle mixed sync and async callbacks with emit", () => {
-      const syncCallback = jest.fn();
-      const asyncCallback = jest.fn().mockImplementation(async (data) => {
+      const syncCallback = vi.fn();
+      const asyncCallback = vi.fn().mockImplementation(async (data) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         return `processed ${data}`;
       });
@@ -171,7 +181,7 @@ describe("Signal", () => {
     });
 
     it("should handle async errors properly", async () => {
-      const asyncErrorCallback = jest.fn().mockImplementation(async () => {
+      const asyncErrorCallback = vi.fn().mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         throw new Error("async error");
       });
@@ -195,12 +205,12 @@ describe("Signal", () => {
     it("should wait for async handlers to complete", async () => {
       const results: string[] = [];
 
-      const asyncCallback1 = jest.fn().mockImplementation(async (data) => {
+      const asyncCallback1 = vi.fn().mockImplementation(async (data) => {
         await new Promise((resolve) => setTimeout(resolve, 20));
         results.push(`first ${data}`);
       });
 
-      const asyncCallback2 = jest.fn().mockImplementation(async (data) => {
+      const asyncCallback2 = vi.fn().mockImplementation(async (data) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         results.push(`second ${data}`);
       });
@@ -219,11 +229,11 @@ describe("Signal", () => {
     it("should handle mixed sync and async callbacks", async () => {
       const results: string[] = [];
 
-      const syncCallback = jest.fn().mockImplementation((data) => {
+      const syncCallback = vi.fn().mockImplementation((data) => {
         results.push(`sync ${data}`);
       });
 
-      const asyncCallback = jest.fn().mockImplementation(async (data) => {
+      const asyncCallback = vi.fn().mockImplementation(async (data) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         results.push(`async ${data}`);
       });
@@ -238,8 +248,8 @@ describe("Signal", () => {
     });
 
     it("should return the number of handlers called", async () => {
-      const syncCallback = jest.fn();
-      const asyncCallback = jest.fn().mockImplementation(async () => {
+      const syncCallback = vi.fn();
+      const asyncCallback = vi.fn().mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
       });
 
@@ -252,7 +262,7 @@ describe("Signal", () => {
     });
 
     it("should handle errors in async callbacks", async () => {
-      const asyncCallback = jest.fn().mockImplementation(async () => {
+      const asyncCallback = vi.fn().mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         throw new Error("async error");
       });
@@ -266,11 +276,11 @@ describe("Signal", () => {
     });
 
     it("should handle errors in both sync and async callbacks", async () => {
-      const syncCallback = jest.fn().mockImplementation(() => {
+      const syncCallback = vi.fn().mockImplementation(() => {
         throw new Error("sync error");
       });
 
-      const asyncCallback = jest.fn().mockImplementation(async () => {
+      const asyncCallback = vi.fn().mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         throw new Error("async error");
       });
@@ -293,7 +303,7 @@ describe("Signal", () => {
 
   describe("once with async handlers", () => {
     it("should execute async callback only once", async () => {
-      const asyncCallback = jest.fn().mockImplementation(async (data) => {
+      const asyncCallback = vi.fn().mockImplementation(async (data) => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         return `processed ${data}`;
       });
@@ -308,7 +318,7 @@ describe("Signal", () => {
     });
 
     it("should handle async errors in one-time callbacks", async () => {
-      const asyncErrorCallback = jest.fn().mockImplementation(async () => {
+      const asyncErrorCallback = vi.fn().mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
         throw new Error("async once error");
       });
@@ -334,18 +344,16 @@ describe("Signal", () => {
       const results: string[] = [];
 
       // This handler is sync or async depending on input
-      const conditionalHandler = jest
-        .fn()
-        .mockImplementation((data: string) => {
-          if (data.includes("async")) {
-            return (async () => {
-              await new Promise((resolve) => setTimeout(resolve, 10));
-              results.push(`async handled ${data}`);
-            })();
-          }
-          results.push(`sync handled ${data}`);
-          return undefined; // synchronous return
-        });
+      const conditionalHandler = vi.fn().mockImplementation((data: string) => {
+        if (data.includes("async")) {
+          return (async () => {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            results.push(`async handled ${data}`);
+          })();
+        }
+        results.push(`sync handled ${data}`);
+        return undefined; // synchronous return
+      });
 
       signal.connect(conditionalHandler);
 
@@ -371,6 +379,7 @@ describe("Signal", () => {
 
       signal.emit("test");
       expect(mockErrorHandler).toHaveBeenCalledWith(expect.any(Error));
+      // @ts-expect-error
       expect(mockErrorHandler.mock.calls[0][0].message).toBe("string error");
     });
 
@@ -386,7 +395,7 @@ describe("Signal", () => {
     });
 
     it("should handle cascading errors in error handlers", () => {
-      const errorHandler = jest.fn().mockImplementation(() => {
+      const errorHandler = vi.fn().mockImplementation(() => {
         throw new Error("error handler error");
       });
 
@@ -417,8 +426,8 @@ describe("Signal", () => {
 
   describe("destroy", () => {
     it("should disconnect all listeners", () => {
-      const mockCallback2 = jest.fn();
-      const mockCallback3 = jest.fn();
+      const mockCallback2 = vi.fn();
+      const mockCallback3 = vi.fn();
 
       signal.connect(mockCallback);
       signal.connect(mockCallback2);
@@ -432,7 +441,7 @@ describe("Signal", () => {
     });
 
     it("should disconnect all async listeners too", async () => {
-      const asyncCallback = jest.fn().mockImplementation(async () => {
+      const asyncCallback = vi.fn().mockImplementation(async () => {
         await new Promise((resolve) => setTimeout(resolve, 10));
       });
 
@@ -482,13 +491,13 @@ describe("Signal", () => {
   describe("type safety", () => {
     it("should work with different data types", () => {
       const numberSignal = new Signal<number>();
-      const numberCallback = jest.fn();
+      const numberCallback = vi.fn();
       numberSignal.connect(numberCallback);
       numberSignal.emit(42);
       expect(numberCallback).toHaveBeenCalledWith(42);
 
       const objectSignal = new Signal<{ id: number; name: string }>();
-      const objectCallback = jest.fn();
+      const objectCallback = vi.fn();
       objectSignal.connect(objectCallback);
       objectSignal.emit({ id: 1, name: "test" });
       expect(objectCallback).toHaveBeenCalledWith({ id: 1, name: "test" });
@@ -498,19 +507,19 @@ describe("Signal", () => {
       const signal = new Signal<string>();
 
       // Handler returning void
-      const voidCallback = jest.fn().mockImplementation((data: string) => {
+      const voidCallback = vi.fn().mockImplementation((data: string) => {
         return undefined;
       });
 
       // Handler returning Promise<void>
-      const promiseCallback = jest
+      const promiseCallback = vi
         .fn()
         .mockImplementation(async (data: string) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
         });
 
       // Handler returning a value (which should be ignored)
-      const valueCallback = jest.fn().mockImplementation((data: string) => {
+      const valueCallback = vi.fn().mockImplementation((data: string) => {
         return data.toUpperCase();
       });
 

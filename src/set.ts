@@ -1,6 +1,5 @@
-import type { CollectionEvent, Observable } from "./types";
-
-import { Signal } from "./signal";
+import type { CollectionEvent, Observable } from "./types.js";
+import { Signal } from "./signal.js";
 
 /**
  * An observable Set implementation that emits events when its contents change.

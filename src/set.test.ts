@@ -1,12 +1,13 @@
-import { ObservableSet } from "./set";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ObservableSet } from "./set.js";
 
 describe("ObservableSet", () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   let set: ObservableSet<string>;
 
   beforeEach(() => {
     set = new ObservableSet();
-    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -50,7 +51,7 @@ describe("ObservableSet", () => {
       });
 
       it("should emit an event when adding a new value", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.onChange(handler);
 
         set.add("test");
@@ -63,7 +64,7 @@ describe("ObservableSet", () => {
       });
 
       it("should not emit an event when adding an existing value", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.add("test");
         set.onChange(handler);
 
@@ -88,7 +89,7 @@ describe("ObservableSet", () => {
       });
 
       it("should emit an event when deleting an existing value", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.add("test");
         set.onChange(handler);
 
@@ -107,7 +108,7 @@ describe("ObservableSet", () => {
       });
 
       it("should not emit an event when deleting a non-existent value", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.onChange(handler);
 
         set.delete("nonexistent");
@@ -127,7 +128,7 @@ describe("ObservableSet", () => {
       });
 
       it("should emit a clear event", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.add("test");
         set.onChange(handler);
 
@@ -140,7 +141,7 @@ describe("ObservableSet", () => {
       });
 
       it("should not emit clear event on empty set", () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.onChange(handler);
         set.clear();
         expect(handler).not.toHaveBeenCalled();
@@ -272,7 +273,7 @@ describe("ObservableSet", () => {
       });
 
       it("should provide correct arguments to callback", () => {
-        const spy = jest.fn();
+        const spy = vi.fn();
         const testSet = new ObservableSet(["test"]);
 
         testSet.forEach(spy);
@@ -322,10 +323,10 @@ describe("ObservableSet", () => {
 
   describe("error handling", () => {
     it("should handle errors in observers gracefully", () => {
-      const errorHandler = jest.fn(() => {
+      const errorHandler = vi.fn(() => {
         throw new Error("Observer error");
       });
-      const normalHandler = jest.fn();
+      const normalHandler = vi.fn();
 
       set.onChange(errorHandler);
       set.onChange(normalHandler);
@@ -354,7 +355,7 @@ describe("ObservableSet", () => {
 
       it("should emit add event and wait for handlers", async () => {
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}`);
         });
@@ -373,7 +374,7 @@ describe("ObservableSet", () => {
       it("should not emit event when adding existing value", async () => {
         await set.addAsync("test");
 
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.onChange(handler);
 
         await set.addAsync("test");
@@ -384,12 +385,12 @@ describe("ObservableSet", () => {
       it("should wait for all async handlers", async () => {
         const results: string[] = [];
 
-        const slowHandler1 = jest.fn().mockImplementation(async (event) => {
+        const slowHandler1 = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 30));
           results.push(`first: ${event.type}`);
         });
 
-        const slowHandler2 = jest.fn().mockImplementation(async (event) => {
+        const slowHandler2 = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`second: ${event.type}`);
         });
@@ -418,7 +419,7 @@ describe("ObservableSet", () => {
         await set.addAsync("test");
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}: ${event.key}`);
         });
@@ -440,7 +441,7 @@ describe("ObservableSet", () => {
       });
 
       it("should not emit event for non-existent values", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.onChange(handler);
 
         await set.deleteAsync("nonexistent");
@@ -465,7 +466,7 @@ describe("ObservableSet", () => {
         await set.addAsync("test");
 
         const results: string[] = [];
-        const handler = jest.fn().mockImplementation(async (event) => {
+        const handler = vi.fn().mockImplementation(async (event) => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           results.push(`${event.type}`);
         });
@@ -481,7 +482,7 @@ describe("ObservableSet", () => {
       });
 
       it("should not emit clear event when set is empty", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.onChange(handler);
 
         await set.clearAsync();
@@ -492,15 +493,15 @@ describe("ObservableSet", () => {
       it("should handle errors in async handlers", async () => {
         await set.addAsync("test");
 
-        const errorHandler = jest.fn().mockImplementation(async () => {
+        const errorHandler = vi.fn().mockImplementation(async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           throw new Error("Async handler error");
         });
 
-        const normalHandler = jest.fn();
-        const consoleErrorSpy = jest
+        const normalHandler = vi.fn();
+        const consoleErrorSpy = vi
           .spyOn(console, "error")
-          .mockImplementation();
+          .mockImplementation(() => {});
 
         set.onChange(errorHandler);
         set.onChange(normalHandler);
@@ -516,7 +517,7 @@ describe("ObservableSet", () => {
 
     describe("async operation chaining", () => {
       it("should support chaining multiple async operations", async () => {
-        const handler = jest.fn();
+        const handler = vi.fn();
         set.onChange(handler);
 
         // Chain multiple async operations
@@ -536,8 +537,8 @@ describe("ObservableSet", () => {
         const set1 = new ObservableSet(["a", "b"]);
         const set2 = new ObservableSet(["b", "c"]);
 
-        const handler1 = jest.fn();
-        const handler2 = jest.fn();
+        const handler1 = vi.fn();
+        const handler2 = vi.fn();
 
         set1.onChange(handler1);
         set2.onChange(handler2);

@@ -1,6 +1,6 @@
-import type { EventHandler } from "./types";
-import { ObservableMap } from "./map";
-import { Signal } from "./signal";
+import type { EventHandler } from "./types.js";
+import { ObservableMap } from "./map.js";
+import { Signal } from "./signal.js";
 
 /**
  * A strongly-typed event emitter that manages event subscriptions and emissions.

@@ -1,4 +1,4 @@
-import { ObservableMap } from "./map";
+import { ObservableMap } from "./map.js";
 
 /**
  * A strict key-value registry that enforces unique registration and required existence.
