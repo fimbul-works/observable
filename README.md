@@ -4,6 +4,7 @@ A lightweight, type-safe Observable library for TypeScript that provides reactiv
 
 [![npm version](https://badge.fury.io/js/%40fimbul-works%2Fobservable.svg)](https://www.npmjs.com/package/@fimbul-works/observable)
 [![TypeScript](https://badges.frapsoft.com/typescript/code/typescript.svg?v=101)](https://github.com/microsoft/TypeScript)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@fimbul-works/observable)](https://bundlephobia.com/package/@fimbul-works/observable)
 
 ## Features
 
